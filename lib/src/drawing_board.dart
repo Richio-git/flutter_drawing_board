@@ -12,6 +12,8 @@ import 'paint_contents/rectangle.dart';
 import 'paint_contents/simple_line.dart';
 import 'paint_contents/smooth_line.dart';
 import 'paint_contents/straight_line.dart';
+import 'paint_contents/rainbow_line.dart';
+
 import 'painter.dart';
 
 /// 默认工具栏构建器
