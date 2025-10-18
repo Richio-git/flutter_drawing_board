@@ -1,9 +1,7 @@
 import 'dart:ui';
-import 'package:flutter/material.dart';
-import 'package:flutter_drawing_board/src/drawing_controller.dart'; 
-// Use the original package imports as needed
-import 'package:flutter_drawing_board/src/helper/helper.dart'; // Assuming PaintContent is here
-import 'package:flutter_drawing_board/src/utils/rainbow_color.dart'; // Your utility
+import '../paint_extension/ex_offset.dart';
+import '../paint_extension/ex_paint.dart';
+import 'paint_content.dart';
 
 class LineSegment {
   final Offset point;
