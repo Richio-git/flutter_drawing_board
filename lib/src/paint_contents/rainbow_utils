@@ -1,0 +1,33 @@
+import 'dart:ui';
+import 'package:flutter/material.dart';
+
+// --- Data Model for a colored point ---
+class ColoredSegment {
+  final Offset point;
+  final double strokeWidth;
+  final Color color;
+
+  ColoredSegment(this.point, this.strokeWidth, this.color);
+
+  Map<String, dynamic> toJson() => {
+        'point': point.toJson(),
+        'strokeWidth': strokeWidth,
+        'color': color.value, // Store color as an int
+      };
+
+  factory ColoredSegment.fromJson(Map<String, dynamic> json) => ColoredSegment(
+        jsonToOffset(json['point'] as Map<String, dynamic>),
+        json['strokeWidth'] as double,
+        Color(json['color'] as int),
+      );
+}
+
+// --- Color Utility ---
+double _currentHue = 0.0;
+const double _colorStep = 5.0; // Adjust for faster/slower color change
+
+Color getNextRainbowColor() {
+  _currentHue = (_currentHue + _colorStep) % 360.0;
+  // Use HSL for smooth, vibrant color cycling
+  return HSLColor.fromAHSL(1.0, _currentHue, 1.0, 0.5).toColor();
+}
