@@ -1,78 +1,119 @@
 import 'dart:ui';
-import '../paint_extension/ex_offset.dart';
-import '../paint_extension/ex_paint.dart';
-import 'paint_content.dart';
+import 'package:flutter/material.dart';
 
-class LineSegment {
-  final Offset point;
-  final Color color;
+// Import necessary files from the flutter_drawing_board package
+import 'package:flutter_drawing_board/src/paint_extension/ex_offset.dart';
+import 'package:flutter_drawing_board/src/paint_extension/ex_paint.dart';
+import 'package:flutter_drawing_board/src/paint_content.dart';
 
-  LineSegment(this.point, this.color);
-}
-
-
-
-double _currentHue = 0.0;
-const double _colorStep = 5.0; 
-
-Color getNextRainbowColor() {
-  _currentHue = (_currentHue + _colorStep) % 360.0;
-  // Saturation (1.0) and Lightness (0.5) for vibrant colors
-  return HSLColor.fromAHSL(1.0, _currentHue, 1.0, 0.5).toColor();
-}
-
-// File: lib/src/helper/rainbow_line.dart
+// Import your utility file
+import 'rainbow_utils.dart'; // <--- Ensure this path is correct
 
 class RainbowLine extends PaintContent {
-  RainbowLine();
+  // Use the same precision as SmoothLine for consistent feel
+  final double brushPrecision;
   
-  // Use LineSegment to store the point AND its unique color
-  final List<LineSegment> _segments = <LineSegment>[]; 
+  // Storage for all points, widths, and colors
+  late List<ColoredSegment> segments; 
 
-  @override
-  void startDraw(Offset point) {
-    // Start the line with the first point and the first rainbow color
-    final color = getNextRainbowColor();
-    _segments.add(LineSegment(point, color));
+  RainbowLine({
+    this.brushPrecision = 0.4,
+  });
+
+  RainbowLine.data({
+    this.brushPrecision = 0.4,
+    required this.segments,
+    required Paint paint,
+  }) : super.paint(paint);
+
+
+  // --- FACTORY/JSON METHODS (Required for Redo/Undo/Saving) ---
+  factory RainbowLine.fromJson(Map<String, dynamic> data) {
+    return RainbowLine.data(
+      brushPrecision: data['brushPrecision'] as double,
+      segments: (data['segments'] as List<dynamic>)
+          .map((dynamic e) => ColoredSegment.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      paint: jsonToPaint(data['paint'] as Map<String, dynamic>),
+    );
   }
 
   @override
-  void drawing(Offset point) {
-    // **KEY CHANGE:** On every movement, get a new color
-    final color = getNextRainbowColor();
-    _segments.add(LineSegment(point, color));
+  String get contentType => 'RainbowLine';
+
+  // --- DRAWING LOGIC ---
+
+  @override
+  void startDraw(Offset startPoint) {
+    segments = <ColoredSegment>[
+      ColoredSegment(startPoint, paint.strokeWidth, getNextRainbowColor())
+    ];
   }
 
   @override
-  void endDraw(Offset point) {} // The logic is handled in drawing
+  void drawing(Offset nowPoint) {
+    final ColoredSegment lastSegment = segments.last;
+    final double distance = (nowPoint - lastSegment.point).distance;
+    final double s = paint.strokeWidth;
 
-  @override
-  void draw(Canvas canvas, Size size, bool repaint) {
-    if (_segments.length < 2) {
-      // Draw a point if there is only one segment
-      if (_segments.isNotEmpty) {
-        canvas.drawPoints(PointMode.points, [_segments.first.point], this.paint);
-      }
-      return;
+    // SmoothLine's logic to calculate strokeWidth
+    double strokeWidth = s * (s * 2 / (s * distance));
+    if (strokeWidth > s * 2) {
+      strokeWidth = s * 2;
     }
-    
-    // Draw each segment individually with its own unique color
-    for (int i = 0; i < _segments.length - 1; i++) {
-      final p1 = _segments[i];
-      final p2 = _segments[i + 1];
+    final double preWidth = lastSegment.strokeWidth;
+    if (strokeWidth - preWidth > brushPrecision) {
+      strokeWidth = preWidth + brushPrecision;
+    } else if (preWidth - strokeWidth > brushPrecision) {
+      strokeWidth = preWidth - brushPrecision;
+    }
 
-      // Create a dedicated Paint object for this segment's color
-      final segmentPaint = Paint()
-        ..color = p1.color 
-        ..strokeWidth = this.paint.strokeWidth 
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..isAntiAlias = true;
+    // **KEY CHANGE:** Get a new color for the new segment
+    final Color color = getNextRainbowColor();
 
-      canvas.drawLine(p1.point, p2.point, segmentPaint);
+    // Record the new segment
+    segments.add(ColoredSegment(nowPoint, strokeWidth, color));
+  }
+
+  @override
+  void draw(Canvas canvas, Size size, bool deeper) {
+    if (segments.length < 2) return;
+
+    for (int i = 1; i < segments.length; i++) {
+      final ColoredSegment p1 = segments[i - 1];
+      final ColoredSegment p2 = segments[i];
+
+      // Create a Paint object for each segment to apply its specific color
+      final segmentPaint = paint.copyWith(
+        strokeWidth: p2.strokeWidth,
+        color: p2.color, // Use the segment's unique color
+        blendMode: BlendMode.src,
+      );
+
+      canvas.drawPath(
+        Path()
+          ..moveTo(p1.point.dx, p1.point.dy)
+          ..lineTo(p2.point.dx, p2.point.dy),
+        segmentPaint,
+      );
     }
   }
 
+  @override
+  void endDraw(Offset endPoint) {}
+
+  @override
+  RainbowLine copy() => RainbowLine(brushPrecision: brushPrecision);
+
+  @override
+  Map<String, dynamic> toContentJson() {
+    return <String, dynamic>{
+      'brushPrecision': brushPrecision,
+      'segments': segments.map((ColoredSegment e) => e.toJson()).toList(),
+      'paint': paint.toJson(),
+    };
+  }
+}
   // You will also need to implement fromJson and toMap methods
   // to ensure undo/redo and saving functionality works with the new data model.
 }
