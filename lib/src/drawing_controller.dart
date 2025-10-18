@@ -7,6 +7,8 @@ import 'helper/safe_value_notifier.dart';
 import 'paint_contents/eraser.dart';
 import 'paint_contents/paint_content.dart';
 import 'paint_contents/simple_line.dart';
+import 'paint_contents/rainbow_line.dart';
+
 import 'paint_extension/ex_paint.dart';
 
 /// 绘制参数
