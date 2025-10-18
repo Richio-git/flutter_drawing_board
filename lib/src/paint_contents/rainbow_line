@@ -1,1 +1,80 @@
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:flutter_drawing_board/src/drawing_controller.dart'; 
+// Use the original package imports as needed
+import 'package:flutter_drawing_board/src/helper/helper.dart'; // Assuming PaintContent is here
+import 'package:flutter_drawing_board/src/utils/rainbow_color.dart'; // Your utility
 
+class LineSegment {
+  final Offset point;
+  final Color color;
+
+  LineSegment(this.point, this.color);
+}
+
+
+
+double _currentHue = 0.0;
+const double _colorStep = 5.0; 
+
+Color getNextRainbowColor() {
+  _currentHue = (_currentHue + _colorStep) % 360.0;
+  // Saturation (1.0) and Lightness (0.5) for vibrant colors
+  return HSLColor.fromAHSL(1.0, _currentHue, 1.0, 0.5).toColor();
+}
+
+// File: lib/src/helper/rainbow_line.dart
+
+class RainbowLine extends PaintContent {
+  RainbowLine();
+  
+  // Use LineSegment to store the point AND its unique color
+  final List<LineSegment> _segments = <LineSegment>[]; 
+
+  @override
+  void startDraw(Offset point) {
+    // Start the line with the first point and the first rainbow color
+    final color = getNextRainbowColor();
+    _segments.add(LineSegment(point, color));
+  }
+
+  @override
+  void drawing(Offset point) {
+    // **KEY CHANGE:** On every movement, get a new color
+    final color = getNextRainbowColor();
+    _segments.add(LineSegment(point, color));
+  }
+
+  @override
+  void endDraw(Offset point) {} // The logic is handled in drawing
+
+  @override
+  void draw(Canvas canvas, Size size, bool repaint) {
+    if (_segments.length < 2) {
+      // Draw a point if there is only one segment
+      if (_segments.isNotEmpty) {
+        canvas.drawPoints(PointMode.points, [_segments.first.point], this.paint);
+      }
+      return;
+    }
+    
+    // Draw each segment individually with its own unique color
+    for (int i = 0; i < _segments.length - 1; i++) {
+      final p1 = _segments[i];
+      final p2 = _segments[i + 1];
+
+      // Create a dedicated Paint object for this segment's color
+      final segmentPaint = Paint()
+        ..color = p1.color 
+        ..strokeWidth = this.paint.strokeWidth 
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..isAntiAlias = true;
+
+      canvas.drawLine(p1.point, p2.point, segmentPaint);
+    }
+  }
+
+  // You will also need to implement fromJson and toMap methods
+  // to ensure undo/redo and saving functionality works with the new data model.
+}
