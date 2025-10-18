@@ -1,0 +1,11 @@
+// Current hue value (0.0 to 360.0)
+double _currentHue = 0.0;
+const double _colorStep = 5.0; // How much the hue changes per new point
+
+// Function to get the next color in the rainbow cycle
+Color getNextRainbowColor() {
+  // Increment the hue, and wrap around if it exceeds 360
+  _currentHue = (_currentHue + _colorStep) % 360.0;
+  
+  // Convert HSV (Hue, Saturation, Value) to a standard Flutter Color
+  return HSLColor.fromAHSL(1.0, _currentHue, 1.0, 0.5).toColor();
